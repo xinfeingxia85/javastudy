@@ -1,4 +1,4 @@
-package com.darts;
+package com.study;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -57,6 +57,7 @@ public class DoubleArrayTrie {
 		return allocSize = newSize;
 	}
 
+	//子节点的创建
 	private int fetch(Node parent, List<Node> siblings) {
 		if (error_ < 0)
 			return 0;
@@ -67,13 +68,13 @@ public class DoubleArrayTrie {
 			if ((length != null ? length[i] : key.get(i).length()) < parent.depth)
 				continue;
 
-			String tmp = key.get(i);// 获取对应的关键词
+			String tmp = key.get(i);
 
 			int cur = 0;
 			if ((length != null ? length[i] : tmp.length()) != parent.depth)
 				cur = (int) tmp.charAt(parent.depth) + 1;
 
-			if (prev > cur) {
+			if (prev > cur) {//这个条件用于验证是否已经排序过，字典必须是已经排序过的。
 				error_ = -3;
 				return 0;
 			}
@@ -103,46 +104,46 @@ public class DoubleArrayTrie {
 			return 0;
 
 		int begin = 0;
-		int pos = ((siblings.get(0).code + 1 > nextCheckPos) ? siblings.get(0).code + 1 : nextCheckPos) - 1;
+		int pos = ((siblings.get(0).code + 1 > nextCheckPos) ? siblings.get(0).code + 1
+				: nextCheckPos) - 1;
+
 		int nonzero_num = 0;
 		int first = 0;
 
+		//调整数组的大小
 		if (allocSize <= pos)
 			resize(pos + 1);
 
-		//以第一个节点进行触发
 		outer: while (true) {
 			pos++;
 
 			if (allocSize <= pos)
 				resize(pos + 1);
 
-			if (check[pos] != 0) {//之前已经被占用，防止冲突，需要重新寻找
+			if (check[pos] != 0) {
 				nonzero_num++;
 				continue;
-			} else if (first == 0) {//记录一下当前的pos
+			} else if (first == 0) {
 				nextCheckPos = pos;
 				first = 1;
 			}
 
 			begin = pos - siblings.get(0).code;
-			if (allocSize <= (begin + siblings.get(siblings.size() - 1).code)) {// 调整数组大小
+			if (allocSize <= (begin + siblings.get(siblings.size() - 1).code)) {
 				// progress can be zero
-				double l = (1.05 > 1.0 * keySize / (progress + 1)) ? 1.05 : 1.0 * keySize / (progress + 1);
+				double l = (1.05 > 1.0 * keySize / (progress + 1)) ? 1.05 : 1.0
+						* keySize / (progress + 1);
 				resize((int) (allocSize * l));
 			}
 
-			if (used[begin]) //当前的begin被占用，解决冲突需要重新查找
+			if (used[begin])
 				continue;
-			
-			//循环解决是否有冲突，由于同一组子节点begin需要相同
-			for (int i = 1; i < siblings.size(); i++) 
+
+			for (int i = 1; i < siblings.size(); i++)
 				if (check[begin + siblings.get(i).code] != 0)
 					continue outer;
 
 			break;
-			
-			//一直找到一个begin值，check[begin+code] == 0, 也就是寻找空的节点。
 		}
 
 		// -- Simple heuristics --
@@ -154,20 +155,19 @@ public class DoubleArrayTrie {
 		if (1.0 * nonzero_num / (pos - nextCheckPos + 1) >= 0.95)
 			nextCheckPos = pos;
 
-		used[begin] = true;//标识begin是否已经被使用了
-		
+		used[begin] = true;
 		size = (size > begin + siblings.get(siblings.size() - 1).code + 1) ? size
 				: begin + siblings.get(siblings.size() - 1).code + 1;
 
 		for (int i = 0; i < siblings.size(); i++)
-			check[begin + siblings.get(i).code] = begin; //同一上层节点的base值，满足check[s] = base[t]
+			check[begin + siblings.get(i).code] = begin;
 
-		for (int i = 0; i < siblings.size(); i++) {//逐步循环构造其它节点
+		for (int i = 0; i < siblings.size(); i++) {
 			List<Node> new_siblings = new ArrayList<Node>();
 
 			if (fetch(siblings.get(i), new_siblings) == 0) {
-				base[begin + siblings.get(i).code] = (value != null) ? (-value[siblings.get(i).left] - 1)
-						: (-siblings.get(i).left - 1);
+				base[begin + siblings.get(i).code] = (value != null) ? (-value[siblings
+						.get(i).left] - 1) : (-siblings.get(i).left - 1);
 
 				if (value != null && (-value[siblings.get(i).left] - 1) >= 0) {
 					error_ = -2;
@@ -238,7 +238,8 @@ public class DoubleArrayTrie {
 		return build(key, null, null, key.size());
 	}
 
-	public int build(List<String> _key, int _length[], int _value[], int _keySize) {
+	public int build(List<String> _key, int _length[], int _value[],
+			int _keySize) {
 		if (_keySize > _key.size() || _key == null)
 			return 0;
 
@@ -249,10 +250,8 @@ public class DoubleArrayTrie {
 		value = _value;
 		progress = 0;
 
-		// 设置base和check的数组大小
 		resize(65536 * 32);
 
-		// root节点的创建
 		base[0] = 1;
 		nextCheckPos = 0;
 
@@ -261,10 +260,8 @@ public class DoubleArrayTrie {
 		root_node.right = keySize;
 		root_node.depth = 0;
 
-		// 创建root节点的子节点
 		List<Node> siblings = new ArrayList<Node>();
 		fetch(root_node, siblings);
-
 		insert(siblings);
 
 		// size += (1 << 8 * 2) + 1; // ???
@@ -278,13 +275,15 @@ public class DoubleArrayTrie {
 
 	public void open(String fileName) throws IOException {
 		File file = new File(fileName);
+		
 		size = (int) file.length() / UNIT_SIZE;
 		check = new int[size];
 		base = new int[size];
 
 		DataInputStream is = null;
 		try {
-			is = new DataInputStream(new BufferedInputStream(new FileInputStream(file), BUF_SIZE));
+			is = new DataInputStream(new BufferedInputStream(
+					new FileInputStream(file), BUF_SIZE));
 			for (int i = 0; i < size; i++) {
 				base[i] = is.readInt();
 				check[i] = is.readInt();
@@ -298,7 +297,8 @@ public class DoubleArrayTrie {
 	public void save(String fileName) throws IOException {
 		DataOutputStream out = null;
 		try {
-			out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(fileName)));
+			out = new DataOutputStream(new BufferedOutputStream(
+					new FileOutputStream(fileName)));
 			for (int i = 0; i < size; i++) {
 				out.writeInt(base[i]);
 				out.writeInt(check[i]);
@@ -347,7 +347,8 @@ public class DoubleArrayTrie {
 		return commonPrefixSearch(key, 0, 0, 0);
 	}
 
-	public List<Integer> commonPrefixSearch(String key, int pos, int len, int nodePos) {
+	public List<Integer> commonPrefixSearch(String key, int pos, int len,
+			int nodePos) {
 		if (len <= 0)
 			len = key.length();
 		if (nodePos <= 0)
@@ -389,9 +390,8 @@ public class DoubleArrayTrie {
 	// debug
 	public void dump() {
 		for (int i = 0; i < size; i++) {
-			if (base[i] == 0)
-				continue;
-			System.err.println("i: " + i + " [" + base[i] + ", " + check[i] + "]");
+			System.err.println("i: " + i + " [" + base[i] + ", " + check[i]
+					+ "]");
 		}
 	}
 }
